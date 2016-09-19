@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+
+	<!-- Optional theme -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css">
+
+	<!-- Latest compiled and minified JavaScript -->
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+    <script src="js/handlebars.min-latest.js"></script>
+    <script src="js/config.js"></script>
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+	<script src="https://d3js.org/d3.v4.min.js"></script>
+	<style type="text/css">
+		#image-container {position: absolute;}
+		svg {position: absolute;top: 0px;left: 0px;z-index: 99999;}
+		#face-metrics {position: absolute;background: #f0f0f0;z-index: 99999;opacity: 0.8;visibility: hidden;padding: 15px;}
+		#face-metrics ul {padding: 0px;}
+		#face-metrics ul li {list-style-type: none;}
+		button {padding: 0px;}
+		.panel-heading a:after {
+		    font-family:'Glyphicons Halflings';
+		    content:"\e114";
+		    float: right;
+		    color: grey;
+		}
+		.panel-heading a.collapsed:after {
+		    content:"\e080";
+		}
+		.panel-metadata {
+			float: right;
+			z-index: 999999;
+		}
+	</style>
+</head>
+<body>
+	<div class="col-md-3 panel-metadata">
+		<div class="panel-group" id="accordion">
+			<div class="panel panel-default" id="panel-object-info">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" data-target="#object-info" href="#object-info">Object Info</a>
+					</h4>
+				</div>
+				<div id="object-info" class="panel-collapse collapse in">
+					<div id="object-data" class="panel-body"></div>
+				</div>
+			</div>
+
+			<div class="panel panel-default" id="panel-clarifai-info">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" data-target="#clarifai-info" href="#clarifai-info">Clarifai</a>
+					</h4>
+				</div>
+				<div id="clarifai-info" class="panel-collapse collapse in">
+					<div class="panel-body">
+						<ul id="clarifai-tags">
+							<li>No tags</li>
+						</ul>
+					</div>
+				</div>
+			</div>	
+
+			<div class="panel panel-default" id="panel-google-vision-info">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" data-target="#google-vision-info" href="#google-vision-info">Google Vision</a>
+					</h4>
+				</div>
+				<div id="google-vision-info" class="panel-collapse collapse in">
+					<div class="panel-body">
+						<div id="google-faces"><span id="faces-count">0</span> faces <button id="show-faces">Show/Hide</button></div>
+						<div id="google-labels"><span id="labels-count">0</span> labels <button id="show-labels">Show/Hide</button></div>
+						<div>Tags</div>
+						<ul id="google-tags">
+							<li>No tags</li>
+						</ul>
+					</div>
+				</div>
+			</div>		
+
+			<div class="panel panel-default" id="panel-imagga-info">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" data-target="#imagga-info" href="#imagga-info">Imagga</a>
+					</h4>
+				</div>
+				<div id="imagga-info" class="panel-collapse collapse in">
+					<div class="panel-body">
+						<ul id="imagga-tags">
+							<li>No tags</li>
+						</ul>
+					</div>
+				</div>
+			</div>		
+		</div>
+	</div>
+
+	<div id="image-container">
+		<img id="big-image">
+	</div>
+
+	<div id="face-metrics">
+		<ul>
+			<li>Anger: <span class="metric-angerLikelihood"></span></li>
+			<li>Joy: <span class="metric-joyLikelihood"></span></li>
+			<li>Sorrow: <span class="metric-sorrowLikelihood"></span></li>
+			<li>Suprise: <span class="metric-surpriseLikelihood"></span></li>
+			<li>Headwear: <span class="metric-headwearLikelihood"></span></li>
+			<li>Blurred: <span class="metric-blurredLikelihood"></span></li>
+			<li>Under exposed: <span class="metric-underExposedLikelihood"></span></li>
+		</ul>
+	</div>
+
+
+	<script id="object-info-template" type="text/template">
+		<dl>
+			<dt>Title: </dt><dd>{{title}}</dd>
+			<dt>ID: </dt><dd><a href="{{url}}">{{id}}</a></dd>
+		</dl>
+		{{#images}}
+			<img src="{{baseimageurl}}?width=50&height=50">
+		{{/images}}
+	</script>	
+
+	<script id="imagga-tag-template" type="text/template">
+		{{#tags}}
+			<li>{{tag}} ({{confidence}})</li>
+		{{/tags}}
+	</script>
+
+	<script id="clarifai-tag-template" type="text/template">
+		{{#tag.classes}}
+			<li>{{this}} ({{lookup ../tag.probs @index}})</li>
+		{{/tag.classes}}
+	</script>
+
+	<script id="google-tag-template" type="text/template">
+		{{#labelAnnotations}}
+			<li>{{description}} ({{score}})</li>
+		{{/labelAnnotations}}
+	</script>
+
+	<script id="object-list-template" type="text/template">
+		{{#records}}
+			<li data-id="{{id}}"><img src="{{image.baseimageurl}}?width=170"></li>
+		{{/records}}
+	</script>
+
+	<script type="text/javascript">
+		var baseURL = HAM.config.apiBaseURL;
+		var endPoint = "/experimental/object"
+		var parameters = {
+			"apikey": HAM.config.apiKey,
+			"size": 1,
+			"sort": "random"
+		};
+		var records;
+
+		var objectID = getrUrlVar("object");
+		if (objectID) {
+			parameters.q = "id:" + objectID;
+		}
+
+		// Prepare the templates
+		var objectInfoSource = $('#object-info-template').html();
+		var objectInfoTemplate = Handlebars.compile(objectInfoSource);
+
+		var listSource = $('#object-list-template').html();
+		var listTemplate = Handlebars.compile(listSource);
+
+		var imaggaTagSource = $('#imagga-tag-template').html();
+		var imaggaTagTemplate = Handlebars.compile(imaggaTagSource);
+
+		var clarifaiTagSource = $('#clarifai-tag-template').html();
+		var clarifaiTagTemplate = Handlebars.compile(clarifaiTagSource);
+
+		var googleTagSource = $('#google-tag-template').html();
+		var googleTagTemplate = Handlebars.compile(googleTagSource);
+
+		// Set up some D3 stuff
+		var lineFunction = d3.line()
+	                         .x(function(d) { return d.x; })
+	                         .y(function(d) { return d.y; });
+
+		var verticesToPolygonPoints = function(d) {
+				return d.boundingPoly.vertices.map(function(d) {return [d.x,d.y].join(",");}).join(" ");
+			};
+
+		var showFaceDetails = function(d) {
+				d3.select("#face-metrics")
+						.style("visibility", "visible")
+						.style("left", d.boundingPoly.vertices[1].x+2 + "px")
+						.style("top", d.boundingPoly.vertices[1].y + "px");
+				d3.select("span.metric-surpriseLikelihood").text(d.surpriseLikelihood);
+				d3.select("span.metric-joyLikelihood").text(d.joyLikelihood);
+				d3.select("span.metric-sorrowLikelihood").text(d.sorrowLikelihood);
+				d3.select("span.metric-angerLikelihood").text(d.angerLikelihood);
+				d3.select("span.metric-headwearLikelihood").text(d.headwearLikelihood);
+				d3.select("span.metric-blurredLikelihood").text(d.blurredLikelihood);
+				d3.select("span.metric-underExposedLikelihood").text(d.underExposedLikelihood);
+			};
+
+		var hideFaceDetails = function(d) {
+            	d3.select("#face-metrics").style("visibility", "hidden");
+            };
+
+		$.getJSON(baseURL + endPoint, parameters, function(data) {
+			records = data.records;
+
+			$.getJSON(baseURL + "/object/" + records[0].id, parameters, function(data) {
+				var objectInfo = objectInfoTemplate(data);
+				$("#object-data").html(objectInfo);
+			});
+
+			$("#big-image")
+				.attr("src", records[0].image.baseimageurl)
+				.load(function() {drawAnnotations(records[0])});
+
+			if (records[0].imagga) {
+				if (records[0].imagga.tags) {
+					var tagInfo = imaggaTagTemplate(records[0].imagga.tags.results);
+					$('#imagga-tags').html(tagInfo);	
+				}				
+			}
+			if (records[0].clarifai) {
+				if (records[0].clarifai.results) {
+					var tagInfo = clarifaiTagTemplate(records[0].clarifai.results[0].result);
+					$('#clarifai-tags').html(tagInfo);	
+				}				
+			}
+			if (records[0].googlevision) {
+				if (records[0].googlevision.responses[0]) {
+					var tagInfo = googleTagTemplate(records[0].googlevision.responses[0]);
+					$('#google-tags').html(tagInfo);	
+				}				
+			}
+		});
+
+		$("#show-faces").on("click", function(e) {
+			$("#faces").toggle();
+			});
+
+		$("#show-labels").on("click", function(e) {
+			$("#text").toggle();
+			});
+
+		function drawAnnotations(record) {
+			var svgContainer = d3.select("#image-container").append("svg")
+		                                    .attr("width", $("#big-image").width())
+		                                    .attr("height", $("#big-image").height());
+
+			var textAnnotations = record.googlevision.responses[0].textAnnotations; 
+			if (textAnnotations) {
+				$("#labels-count").html(textAnnotations.length);
+
+				var textGroup = svgContainer.append("g")
+									.attr("id", "text");
+				
+				var texts = textGroup.selectAll("polygon")
+										.data(textAnnotations)
+										.enter()
+										.append("polygon");
+
+				texts.attr("points", verticesToPolygonPoints)
+			                            .attr("stroke", "blue")
+			                            .attr("stroke-width", 2)
+			                            .attr("fill", "none");
+
+				var textLabels = textGroup.selectAll("text")
+										.data(textAnnotations)
+										.enter()
+										.append("text");
+
+				textLabels.text(function(d) {return d.description;})
+										.attr("x", function(d) {return d.boundingPoly.vertices[0].x;})
+						                .attr("y", function(d) {return d.boundingPoly.vertices[0].y;})
+					                    .attr("font-family", "sans-serif")
+					                    .attr("font-size", "20px")
+						                .attr("fill", "red");
+			}
+
+			var faceAnnotations = record.googlevision.responses[0].faceAnnotations; 
+			if (faceAnnotations) {
+				$("#faces-count").html(faceAnnotations.length);
+
+				var faceGroup = svgContainer.append("g")
+									.attr("id", "faces");
+
+				var faces = faceGroup.selectAll("polygon")
+										.data(faceAnnotations)
+										.enter()
+										.append("polygon");
+
+				faces.attr("points", verticesToPolygonPoints)
+			                            .attr("stroke", "blue")
+			                            .attr("stroke-width", 2)
+			                            .attr("fill", "none")
+			                            .attr("pointer-events", "visible")
+			                            .on("mouseout", hideFaceDetails)
+			                            .on("mouseover", showFaceDetails);
+			}						
+		}
+
+
+		function getrUrlVar(key) {
+			var result = new RegExp(key + "=([^&]*)", "i").exec(window.location.search);
+			return result && unescape(result[1]) || "";
+		}
+	</script>
+</body>
+</html>
