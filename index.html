@@ -222,7 +222,7 @@
 
 			if (records[0].imagga) {
 				if (records[0].imagga.tags) {
-					var tagInfo = imaggaTagTemplate(records[0].imagga.tags.results);
+					var tagInfo = imaggaTagTemplate(records[0].imagga.tags.results[0]);
 					$('#imagga-tags').html(tagInfo);	
 				}				
 			}
