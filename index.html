@@ -90,6 +90,11 @@
 				</div>
 				<div id="imagga-info" class="panel-collapse collapse in">
 					<div class="panel-body">
+						<div>Categories</div>
+						<ul id="imagga-categories">
+							<li>No categories</li>
+						</ul>
+						<div>Tags</div>
 						<ul id="imagga-tags">
 							<li>No tags</li>
 						</ul>
@@ -125,6 +130,12 @@
 			<img src="{{baseimageurl}}?width=50&height=50">
 		{{/images}}
 	</script>	
+
+	<script id="imagga-category-template" type="text/template">
+		{{#categories}}
+			<li>{{name}} ({{confidence}})</li>
+		{{/categories}}
+	</script>
 
 	<script id="imagga-tag-template" type="text/template">
 		{{#tags}}
@@ -175,6 +186,9 @@
 		var imaggaTagSource = $('#imagga-tag-template').html();
 		var imaggaTagTemplate = Handlebars.compile(imaggaTagSource);
 
+		var imaggaCategorySource = $('#imagga-category-template').html();
+		var imaggaCategoryTemplate = Handlebars.compile(imaggaCategorySource);
+
 		var clarifaiTagSource = $('#clarifai-tag-template').html();
 		var clarifaiTagTemplate = Handlebars.compile(clarifaiTagSource);
 
@@ -224,6 +238,10 @@
 				if (records[0].imagga.tags) {
 					var tagInfo = imaggaTagTemplate(records[0].imagga.tags.results[0]);
 					$('#imagga-tags').html(tagInfo);	
+				}			
+				if (records[0].imagga.categories) {
+					var categoryInfo = imaggaCategoryTemplate(records[0].imagga.categories.results[0]);
+					$('#imagga-categories').html(categoryInfo);	
 				}				
 			}
 			if (records[0].clarifai) {
