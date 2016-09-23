@@ -19,6 +19,7 @@
 		#face-metrics {position: absolute;background: #f0f0f0;z-index: 99999;opacity: 0.8;visibility: hidden;padding: 15px;}
 		#face-metrics ul {padding: 0px;}
 		#face-metrics ul li {list-style-type: none;}
+		#faces-data img {height: 50px;margin-bottom: 4px;}
 		button {padding: 0px;}
 		.panel-heading a:after {
 		    font-family:'Glyphicons Halflings';
@@ -158,7 +159,7 @@
 
 	<script id="google-face-template" type="text/template">
 		{{#each this}}
-			<img src={{this}} style="height:50px;" />
+			<img src={{this}}>
 		{{/each}}
 	</script>
 
@@ -241,9 +242,7 @@
 			
 				var imageInfoURL = record.image.iiifbaseuri + "/info.json";
 				$.getJSON(imageInfoURL, function(imageData) {
-					//Test for width data in the original record
-					var imageScaleFactor = imageData.width/record.image.width;
-					record.image.scalefactor = imageScaleFactor;
+					record.iiif = imageData;
 
 					$("#big-image")
 						.attr("src", record.image.baseimageurl)
@@ -286,6 +285,14 @@
 			});
 
 		function drawAnnotations(record) {
+			//Test for width data in the original record
+			var displayImageWidth = record.image.width;
+			if (!displayImageWidth) {
+				displayImageWidth = $("#big-image").width();
+			}
+			console.log(displayImageWidth);			
+			var imageScaleFactor = record.iiif.width/displayImageWidth;
+
 			var svgContainer = d3.select("#image-container").append("svg")
 		                                    .attr("width", $("#big-image").width())
 		                                    .attr("height", $("#big-image").height());
@@ -324,17 +331,18 @@
 			if (faceAnnotations) {
 				$("#faces-count").html(faceAnnotations.length);
 
+				//Build the IIIF image URLs to display just the region for each face
 				var faceURLs = [];
 				faceAnnotations.forEach(function(d) {
-					var xOffset =  Math.round(d.boundingPoly.vertices[0].x*record.image.scalefactor);
-					var yOffset = Math.round(d.boundingPoly.vertices[0].y*record.image.scalefactor);
-					var width = Math.round((d.boundingPoly.vertices[1].x - d.boundingPoly.vertices[0].x)*record.image.scalefactor);
-					var height = Math.round((d.boundingPoly.vertices[2].y - d.boundingPoly.vertices[0].y)*record.image.scalefactor);
+					var xOffset =  Math.round(d.boundingPoly.vertices[0].x*imageScaleFactor);
+					var yOffset = Math.round(d.boundingPoly.vertices[0].y*imageScaleFactor);
+					var width = Math.round((d.boundingPoly.vertices[1].x - d.boundingPoly.vertices[0].x)*imageScaleFactor);
+					var height = Math.round((d.boundingPoly.vertices[2].y - d.boundingPoly.vertices[0].y)*imageScaleFactor);
 
 					faceURLs.push(record.image.iiifbaseuri + "/" + xOffset + "," + yOffset + "," + width + "," + height + "/full/0/native.jpg");
 				});
 
-				//draw the list of face thumbnails
+				//draw the face thumbnails
 				var faces = googleFaceTemplate(faceURLs);
 				$("#faces-data").html(faces);
 
