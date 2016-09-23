@@ -46,6 +46,7 @@
 				</div>
 				<div id="object-info" class="panel-collapse collapse in">
 					<div id="object-data" class="panel-body"></div>
+					<div id="faces-data" class="panel-body"></div>
 				</div>
 			</div>
 
@@ -155,6 +156,12 @@
 		{{/labelAnnotations}}
 	</script>
 
+	<script id="google-face-template" type="text/template">
+		{{#each this}}
+			<img src={{this}} style="height:50px;" />
+		{{/each}}
+	</script>
+
 	<script id="object-list-template" type="text/template">
 		{{#records}}
 			<li data-id="{{id}}"><img src="{{image.baseimageurl}}?width=170"></li>
@@ -195,6 +202,9 @@
 		var googleTagSource = $('#google-tag-template').html();
 		var googleTagTemplate = Handlebars.compile(googleTagSource);
 
+		var googleFaceSource = $('#google-face-template').html();
+		var googleFaceTemplate = Handlebars.compile(googleFaceSource);
+
 		// Set up some D3 stuff
 		var lineFunction = d3.line()
 	                         .x(function(d) { return d.x; })
@@ -223,39 +233,48 @@
             };
 
 		$.getJSON(baseURL + endPoint, parameters, function(data) {
-			records = data.records;
+			record = data.records[0];
 
-			$.getJSON(baseURL + "/object/" + records[0].id, parameters, function(data) {
+			$.getJSON(baseURL + "/object/" + record.id, parameters, function(data) {
 				var objectInfo = objectInfoTemplate(data);
 				$("#object-data").html(objectInfo);
+			
+				var imageInfoURL = record.image.iiifbaseuri + "/info.json";
+				$.getJSON(imageInfoURL, function(imageData) {
+					//Test for width data in the original record
+					var imageScaleFactor = imageData.width/record.image.width;
+					record.image.scalefactor = imageScaleFactor;
+
+					$("#big-image")
+						.attr("src", record.image.baseimageurl)
+						.load(function() {drawAnnotations(record)});
+
+					if (record.imagga) {
+						if (record.imagga.tags) {
+							var tagInfo = imaggaTagTemplate(record.imagga.tags.results[0]);
+							$('#imagga-tags').html(tagInfo);	
+						}			
+						if (record.imagga.categories) {
+							var categoryInfo = imaggaCategoryTemplate(record.imagga.categories.results[0]);
+							$('#imagga-categories').html(categoryInfo);	
+						}				
+					}
+					if (record.clarifai) {
+						if (record.clarifai.results) {
+							var tagInfo = clarifaiTagTemplate(record.clarifai.results[0].result);
+							$('#clarifai-tags').html(tagInfo);	
+						}				
+					}
+					if (record.googlevision) {
+						if (record.googlevision.responses[0]) {
+							var tagInfo = googleTagTemplate(record.googlevision.responses[0]);
+							$('#google-tags').html(tagInfo);	
+						}				
+					}
+				});
 			});
 
-			$("#big-image")
-				.attr("src", records[0].image.baseimageurl)
-				.load(function() {drawAnnotations(records[0])});
 
-			if (records[0].imagga) {
-				if (records[0].imagga.tags) {
-					var tagInfo = imaggaTagTemplate(records[0].imagga.tags.results[0]);
-					$('#imagga-tags').html(tagInfo);	
-				}			
-				if (records[0].imagga.categories) {
-					var categoryInfo = imaggaCategoryTemplate(records[0].imagga.categories.results[0]);
-					$('#imagga-categories').html(categoryInfo);	
-				}				
-			}
-			if (records[0].clarifai) {
-				if (records[0].clarifai.results) {
-					var tagInfo = clarifaiTagTemplate(records[0].clarifai.results[0].result);
-					$('#clarifai-tags').html(tagInfo);	
-				}				
-			}
-			if (records[0].googlevision) {
-				if (records[0].googlevision.responses[0]) {
-					var tagInfo = googleTagTemplate(records[0].googlevision.responses[0]);
-					$('#google-tags').html(tagInfo);	
-				}				
-			}
 		});
 
 		$("#show-faces").on("click", function(e) {
@@ -305,6 +324,21 @@
 			if (faceAnnotations) {
 				$("#faces-count").html(faceAnnotations.length);
 
+				var faceURLs = [];
+				faceAnnotations.forEach(function(d) {
+					var xOffset =  Math.round(d.boundingPoly.vertices[0].x*record.image.scalefactor);
+					var yOffset = Math.round(d.boundingPoly.vertices[0].y*record.image.scalefactor);
+					var width = Math.round((d.boundingPoly.vertices[1].x - d.boundingPoly.vertices[0].x)*record.image.scalefactor);
+					var height = Math.round((d.boundingPoly.vertices[2].y - d.boundingPoly.vertices[0].y)*record.image.scalefactor);
+
+					faceURLs.push(record.image.iiifbaseuri + "/" + xOffset + "," + yOffset + "," + width + "," + height + "/full/0/native.jpg");
+				});
+
+				//draw the list of face thumbnails
+				var faces = googleFaceTemplate(faceURLs);
+				$("#faces-data").html(faces);
+
+				//draw the annotations over the big image
 				var faceGroup = svgContainer.append("g")
 									.attr("id", "faces");
 
