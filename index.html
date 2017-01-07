@@ -19,7 +19,19 @@
 		#face-metrics {position: absolute;background: #f0f0f0;z-index: 99999;opacity: 0.8;visibility: hidden;padding: 15px;}
 		#face-metrics ul {padding: 0px;}
 		#face-metrics ul li {list-style-type: none;}
-		#faces-data img {height: 50px;margin-bottom: 4px;}
+		#google-faces {margin-top: 5px; margin-bottom: 5px;}
+		#google-faces img {height: 50px;margin-bottom: 4px;}
+		#google-labels {margin-top: 5px; margin-bottom: 5px;}
+		#google-labels li {margin-bottom: 2px;}
+		#google-labels li img {height: 25px;margin-right: 4px;}
+		#microsoft-faces {}
+		#microsoft-faces li {margin-bottom: 2px;}
+		#microsoft-faces li img {height: 25px;margin-right: 4px;}
+		.imagga-color-block {display: inline-block; width: 25px;height: 25px;margin-right: 4px;}
+		#sample-set ul {padding: 0px;}
+		#sample-set ul li {list-style-type: none;margin-bottom: 4px;}
+		#sample-set ul li img {margin-right: 4px;}
+		#sample-set ul li span {overflow: hidden;width:70%;white-space: nowrap;display: inline-block; text-overflow: ellipsis;}
 		button {padding: 0px;}
 		.panel-heading a:after {
 		    font-family:'Glyphicons Halflings';
@@ -31,14 +43,31 @@
 		    content:"\e080";
 		}
 		.panel-metadata {
+			/*overflow-y: scroll;*/
+			/*height: 900px;*/
 			float: right;
 			z-index: 999999;
 		}
 	</style>
 </head>
 <body>
+
 	<div class="col-md-3 panel-metadata">
 		<div class="panel-group" id="accordion">
+			<div class="panel panel-default" id="panel-sample-set">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" data-target="#sample-set" href="#sample-set">Sample Set</a>
+					</h4>
+				</div>
+				<div id="sample-set" class="panel-collapse collapse in">
+					<div class="panel-body">
+						<ul id="sample-set-data">					
+						</ul>
+					</div>
+				</div>
+			</div>
+
 			<div class="panel panel-default" id="panel-object-info">
 				<div class="panel-heading">
 					<h4 class="panel-title">
@@ -47,62 +76,44 @@
 				</div>
 				<div id="object-info" class="panel-collapse collapse in">
 					<div id="object-data" class="panel-body"></div>
-					<div id="faces-data" class="panel-body"></div>
 				</div>
-			</div>
 
-			<div class="panel panel-default" id="panel-clarifai-info">
 				<div class="panel-heading">
 					<h4 class="panel-title">
 						<a data-toggle="collapse" data-target="#clarifai-info" href="#clarifai-info">Clarifai</a>
 					</h4>
 				</div>
 				<div id="clarifai-info" class="panel-collapse collapse in">
-					<div class="panel-body">
-						<ul id="clarifai-tags">
-							<li>No tags</li>
-						</ul>
-					</div>
+					<div class="panel-body" id="clarifai-tags"></div>
 				</div>
-			</div>	
 
-			<div class="panel panel-default" id="panel-google-vision-info">
+				<div class="panel-heading">
+					<h4 class="panel-title">
+						<a data-toggle="collapse" data-target="#microsoft-info" href="#microsoft-info">Microsoft Cognitive Services</a>
+					</h4>
+				</div>
+				<div id="microsoft-info" class="panel-collapse collapse in">
+					<div class="panel-body" id="microsoft-lists"></div>
+				</div>				
+
 				<div class="panel-heading">
 					<h4 class="panel-title">
 						<a data-toggle="collapse" data-target="#google-vision-info" href="#google-vision-info">Google Vision</a>
 					</h4>
 				</div>
 				<div id="google-vision-info" class="panel-collapse collapse in">
-					<div class="panel-body">
-						<div id="google-faces"><span id="faces-count">0</span> faces <button id="show-faces">Show/Hide</button></div>
-						<div id="google-labels"><span id="labels-count">0</span> labels <button id="show-labels">Show/Hide</button></div>
-						<div>Tags</div>
-						<ul id="google-tags">
-							<li>No tags</li>
-						</ul>
-					</div>
+					<div class="panel-body" id="google-tags"></div>
 				</div>
-			</div>		
 
-			<div class="panel panel-default" id="panel-imagga-info">
 				<div class="panel-heading">
 					<h4 class="panel-title">
 						<a data-toggle="collapse" data-target="#imagga-info" href="#imagga-info">Imagga</a>
 					</h4>
 				</div>
 				<div id="imagga-info" class="panel-collapse collapse in">
-					<div class="panel-body">
-						<div>Categories</div>
-						<ul id="imagga-categories">
-							<li>No categories</li>
-						</ul>
-						<div>Tags</div>
-						<ul id="imagga-tags">
-							<li>No tags</li>
-						</ul>
-					</div>
+					<div class="panel-body" id="imagga-lists"></div>
 				</div>
-			</div>		
+			</div>
 		</div>
 	</div>
 
@@ -123,6 +134,14 @@
 	</div>
 
 
+	<script id="sample-set-template" type="text/template">
+		{{#this}}
+			<li>
+				<a href="/machine-tag-explorer/?object={{objectid}}"><img src="http://nrs.harvard.edu/urn-3:HUAM:{{image}}?width=50&height=50"><span>{{title}}</span></a>
+			</li>	
+		{{/this}}
+	</script>	
+
 	<script id="object-info-template" type="text/template">
 		<dl>
 			<dt>Title: </dt><dd>{{title}}</dd>
@@ -133,34 +152,146 @@
 		{{/images}}
 	</script>	
 
-	<script id="imagga-category-template" type="text/template">
-		{{#categories}}
-			<li>{{name}} ({{confidence}})</li>
-		{{/categories}}
+	<script id="imagga-lists-template" type="text/template">
+		<div>Categories</div>
+		<ul id="imagga-categories">
+		{{#if categories}}
+			{{#categories.results.[0].categories}}
+				<li>{{name}} ({{confidence}})</li>
+			{{/categories.results.[0].categories}}
+		{{else}}
+			<li>No categories</li>
+		{{/if}}
+		</ul>
+		<div>Tags</div>
+		<ul id="imagga-tags">
+		{{#if tags}}
+			{{#tags.results.[0].tags}}
+				<li>{{tag}} ({{confidence}})</li>
+			{{/tags.results.[0].tags}}
+		{{else}}
+			<li>No tags</li>
+		{{/if}}
+		</ul>	
+		{{#if colors}}
+			{{#if colors.unsuccessful.info}}
+			{{else}}
+				<div>Background colors</div>
+				<ul>
+				{{#colors.results.[0].info.background_colors}}
+					<li><span class="imagga-color-block" style="background-color:{{html_code}}"></span>{{closest_palette_color}} ({{percentage}})</li>
+				{{/colors.results.[0].info.background_colors}}
+				</ul>
+				<div>Foreground colors</div>
+				<ul>
+				{{#colors.results.[0].info.foreground_colors}}
+					<li><span class="imagga-color-block" style="background-color:{{html_code}}"></span>{{closest_palette_color}} ({{percentage}})</li>
+				{{/colors.results.[0].info.foreground_colors}}
+				</ul>
+				<div>Image colors</div>
+				<ul>
+				{{#colors.results.[0].info.image_colors}}
+					<li><span class="imagga-color-block" style="background-color:{{html_code}}"></span>{{closest_palette_color}} ({{percent}})</li>
+				{{/colors.results.[0].info.image_colors}}
+				</ul>
+			{{/if}}
+		{{/if}}
 	</script>
 
-	<script id="imagga-tag-template" type="text/template">
-		{{#tags}}
-			<li>{{tag}} ({{confidence}})</li>
-		{{/tags}}
+	<script id="microsoft-lists-template" type="text/template">
+		<div>Captions</div>
+		<ul id="microsoft-captions">
+			{{#if describe.description.captions}}
+				{{#describe.description.captions}}
+					<li>{{text}} ({{confidence}})</li>
+				{{/describe.description.captions}}
+			{{else}}
+				<li>No captions</li>
+			{{/if}}
+		</ul>
+		<div>Categories</div>
+		<ul id="microsoft-categories">
+			{{#if analyze.categories}}
+				{{#analyze.categories}}
+					<li>{{name}} ({{score}})</li>
+				{{/analyze.categories}}
+			{{else}}
+				<li>No categories</li>
+			{{/if}}
+		</ul>		
+		<div>Faces</div>
+		<ul id="microsoft-faces">
+			{{#if analyze.faces}}
+				{{#analyze.faces}}
+					<li><img src="{{iiifFaceImageURL}}"><span>Age: {{age}}, Gender: {{gender}}</span></li>		
+				{{/analyze.faces}}
+			{{else}}
+				<li>No faces</li>
+			{{/if}}
+		</ul>
+		<div>Tags</div>
+		<ul id="microsoft-tags">
+			{{#if describe.description.tags}}
+				{{#describe.description.tags}}
+					<li>{{this}}</li>
+				{{/describe.description.tags}}
+			{{else}}
+				<li>No tags</li>
+			{{/if}}
+		</ul>
 	</script>
 
 	<script id="clarifai-tag-template" type="text/template">
-		{{#tag.classes}}
-			<li>{{this}} ({{lookup ../tag.probs @index}})</li>
-		{{/tag.classes}}
+		<div>Tags</div>
+		<ul>
+		{{#if results}}
+			{{#results}}
+				{{#result.tag.classes}}
+					<li>{{this}} ({{lookup ../result.tag.probs @index}})</li>
+				{{/result.tag.classes}}
+			{{/results}}
+		{{/if}}
+		{{#if outputs}}
+			{{#outputs}}
+				{{#data.concepts}}
+					<li>{{name}} ({{value}})</li>
+				{{/data.concepts}}
+			{{/outputs}}
+		{{/if}}
+		</ul>
 	</script>
 
 	<script id="google-tag-template" type="text/template">
-		{{#labelAnnotations}}
-			<li>{{description}} ({{score}})</li>
-		{{/labelAnnotations}}
-	</script>
-
-	<script id="google-face-template" type="text/template">
-		{{#each this}}
-			<img src={{this}}>
-		{{/each}}
+		<div>
+			<span id="google-faces-count">0</span> faces <button id="google-show-faces">Show/Hide</button>
+		</div>
+		<div id="google-faces">
+			{{#if faceAnnotations}}
+				{{#faceAnnotations}}
+					<img src="{{iiifFaceImageURL}}">
+				{{/faceAnnotations}}
+			{{/if}}
+		</div>
+		<div>
+			<span id="google-labels-count">0</span> labels <button id="google-show-labels">Show/Hide</button>
+		</div>
+		<ul id="google-labels">
+			{{#if textAnnotations}}
+				{{#textAnnotations}}
+					<li><img src="{{iiifTextImageURL}}"><span>{{description}}</span></li>
+				{{/textAnnotations}}
+			{{/if}}
+		</ul>
+		<div>Tags</div>
+		<ul id="google-tags">
+			{{#if labelAnnotations}}
+				{{#labelAnnotations}}
+					<li>{{description}} ({{score}})</li>
+				{{/labelAnnotations}}
+			{{else}}
+				<li>No tags</li>
+			{{/if}}
+		</ul>		
 	</script>
 
 	<script id="object-list-template" type="text/template">
@@ -184,6 +315,22 @@
 			parameters.q = "id:" + objectID;
 		}
 
+		// Prepare the sample set
+		var sampleSet = [
+			{objectid: 127319, image: "INV121529P_dynmc", title:"Untitled (people holding \"Elect Stevenson\" sign)"},
+			{objectid: 140138, image: "INV055089_dynmc", title:"Untitled (girl with phonograph and dalmation dog)"},
+			{objectid: 140130, image: "INV048502_dynmc", title:"Untitled (family portrait)"},
+			{objectid: 129312, image: "INV217543_dynmc", title:"Untitled (older man seated at desk, woman standing behind him in front of bookshelves)"},
+			{objectid: 155655, image: "72286_dynmc", title:"Untitled (boy with pig, Lockhart, Texas)"},
+			{objectid: 128261, image: "INV048477_dynmc", title:"Untitled (bride in ornate dress and long train posed with hands on chair back)"},
+			{objectid: 131272, image: "INV057202_dynmc", title:"Untitled (cow in field, facing left)"}
+		];
+
+		var sampleSetSource = $('#sample-set-template').html();
+		var sampleSetTemplate = Handlebars.compile(sampleSetSource);
+		var sampleSetInfo = sampleSetTemplate(sampleSet);
+		$('#sample-set-data').html(sampleSetInfo);	
+
 		// Prepare the templates
 		var objectInfoSource = $('#object-info-template').html();
 		var objectInfoTemplate = Handlebars.compile(objectInfoSource);
@@ -191,20 +338,17 @@
 		var listSource = $('#object-list-template').html();
 		var listTemplate = Handlebars.compile(listSource);
 
-		var imaggaTagSource = $('#imagga-tag-template').html();
-		var imaggaTagTemplate = Handlebars.compile(imaggaTagSource);
+		var imaggaListsSource = $('#imagga-lists-template').html();
+		var imaggaListsTemplate = Handlebars.compile(imaggaListsSource);
 
-		var imaggaCategorySource = $('#imagga-category-template').html();
-		var imaggaCategoryTemplate = Handlebars.compile(imaggaCategorySource);
+		var microsoftListsSource = $('#microsoft-lists-template').html();
+		var microsoftListsTemplate = Handlebars.compile(microsoftListsSource);
 
 		var clarifaiTagSource = $('#clarifai-tag-template').html();
 		var clarifaiTagTemplate = Handlebars.compile(clarifaiTagSource);
 
 		var googleTagSource = $('#google-tag-template').html();
 		var googleTagTemplate = Handlebars.compile(googleTagSource);
-
-		var googleFaceSource = $('#google-face-template').html();
-		var googleFaceTemplate = Handlebars.compile(googleFaceSource);
 
 		// Set up some D3 stuff
 		var lineFunction = d3.line()
@@ -240,66 +384,78 @@
 				var objectInfo = objectInfoTemplate(data);
 				$("#object-data").html(objectInfo);
 			
-				var imageInfoURL = record.image.iiifbaseuri + "/info.json";
+				//This is a workaround until all experimental records have been updated with the new images data structure
+				if (!record.hasOwnProperty("images")) {
+					record.image.googlevision = record.googlevision;
+					delete(record.googlevision);
+
+					record.image.imagga = record.imagga;
+					delete(record.imagga);
+
+					record.image.clarifai = record.clarifai;
+					delete(record.clarifai);
+
+					record.images = []
+					record.images.push(record.image);
+
+					delete(record.image);
+				}
+				image = record.images[0];
+
+				var imageInfoURL = image.iiifbaseuri + "/info.json";
 				$.getJSON(imageInfoURL, function(imageData) {
-					record.iiif = imageData;
+					image.iiif = imageData;
 
 					$("#big-image")
-						.attr("src", record.image.baseimageurl)
-						.load(function() {drawAnnotations(record)});
+						.attr("src", image.baseimageurl)
+						.load(function() {drawAnnotations(image)});
 
-					if (record.imagga) {
-						if (record.imagga.tags) {
-							var tagInfo = imaggaTagTemplate(record.imagga.tags.results[0]);
-							$('#imagga-tags').html(tagInfo);	
-						}			
-						if (record.imagga.categories) {
-							var categoryInfo = imaggaCategoryTemplate(record.imagga.categories.results[0]);
-							$('#imagga-categories').html(categoryInfo);	
-						}				
+					if (image.imagga) {
+						var listsInfo = imaggaListsTemplate(image.imagga);
+						$('#imagga-lists').html(listsInfo);	
 					}
-					if (record.clarifai) {
-						if (record.clarifai.results) {
-							var tagInfo = clarifaiTagTemplate(record.clarifai.results[0].result);
-							$('#clarifai-tags').html(tagInfo);	
-						}				
+					if (image.clarifai) {
+						var tagInfo = clarifaiTagTemplate(image.clarifai);
+						$('#clarifai-tags').html(tagInfo);	
 					}
-					if (record.googlevision) {
-						if (record.googlevision.responses[0]) {
-							var tagInfo = googleTagTemplate(record.googlevision.responses[0]);
+					if (image.googlevision) {
+						if (image.googlevision.responses[0]) {
+							var tagInfo = googleTagTemplate(image.googlevision.responses[0]);
 							$('#google-tags').html(tagInfo);	
+
+							$("#google-show-faces").on("click", function(e) {
+								$("#faces").toggle();
+								});
+
+							$("#google-show-labels").on("click", function(e) {
+								$("#text").toggle();
+								});							
 						}				
+					}
+					if (image.microsoftvision) {
+						var listInfo = microsoftListsTemplate(image.microsoftvision);
+						$('#microsoft-lists').html(listInfo);		
 					}
 				});
 			});
-
-
 		});
 
-		$("#show-faces").on("click", function(e) {
-			$("#faces").toggle();
-			});
-
-		$("#show-labels").on("click", function(e) {
-			$("#text").toggle();
-			});
-
-		function drawAnnotations(record) {
+		function drawAnnotations(image) {
 			//Test for width data in the original record
-			var displayImageWidth = record.image.width;
+			var displayImageWidth = image.width;
 			if (!displayImageWidth) {
 				displayImageWidth = $("#big-image").width();
 			}
-			console.log(displayImageWidth);			
-			var imageScaleFactor = record.iiif.width/displayImageWidth;
+
+			var imageScaleFactor = image.iiif.width/displayImageWidth;
 
 			var svgContainer = d3.select("#image-container").append("svg")
 		                                    .attr("width", $("#big-image").width())
 		                                    .attr("height", $("#big-image").height());
 
-			var textAnnotations = record.googlevision.responses[0].textAnnotations; 
+			var textAnnotations = image.googlevision.responses[0].textAnnotations; 
 			if (textAnnotations) {
-				$("#labels-count").html(textAnnotations.length);
+				$("#google-labels-count").html(textAnnotations.length);
 
 				var textGroup = svgContainer.append("g")
 									.attr("id", "text");
@@ -327,24 +483,9 @@
 						                .attr("fill", "red");
 			}
 
-			var faceAnnotations = record.googlevision.responses[0].faceAnnotations; 
+			var faceAnnotations = image.googlevision.responses[0].faceAnnotations; 
 			if (faceAnnotations) {
-				$("#faces-count").html(faceAnnotations.length);
-
-				//Build the IIIF image URLs to display just the region for each face
-				var faceURLs = [];
-				faceAnnotations.forEach(function(d) {
-					var xOffset =  Math.round(d.boundingPoly.vertices[0].x*imageScaleFactor);
-					var yOffset = Math.round(d.boundingPoly.vertices[0].y*imageScaleFactor);
-					var width = Math.round((d.boundingPoly.vertices[1].x - d.boundingPoly.vertices[0].x)*imageScaleFactor);
-					var height = Math.round((d.boundingPoly.vertices[2].y - d.boundingPoly.vertices[0].y)*imageScaleFactor);
-
-					faceURLs.push(record.image.iiifbaseuri + "/" + xOffset + "," + yOffset + "," + width + "," + height + "/full/0/native.jpg");
-				});
-
-				//draw the face thumbnails
-				var faces = googleFaceTemplate(faceURLs);
-				$("#faces-data").html(faces);
+				$("#google-faces-count").html(faceAnnotations.length);
 
 				//draw the annotations over the big image
 				var faceGroup = svgContainer.append("g")
