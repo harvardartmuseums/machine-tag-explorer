@@ -148,7 +148,7 @@
 			<dt>ID: </dt><dd><a href="{{url}}">{{id}}</a></dd>
 		</dl>
 		{{#images}}
-			<img src="{{baseimageurl}}?width=50&height=50">
+			<img src="{{baseimageurl}}?width=50&height=50" onclick="switchImage({{@index}});">
 		{{/images}}
 	</script>	
 
@@ -381,6 +381,8 @@
 			record = data.records[0];
 
 			$.getJSON(baseURL + "/object/" + record.id, parameters, function(data) {
+				record.metadata = data;
+
 				var objectInfo = objectInfoTemplate(data);
 				$("#object-data").html(objectInfo);
 			
@@ -401,44 +403,52 @@
 					delete(record.image);
 				}
 				image = record.images[0];
-
-				var imageInfoURL = image.iiifbaseuri + "/info.json";
-				$.getJSON(imageInfoURL, function(imageData) {
-					image.iiif = imageData;
-
-					$("#big-image")
-						.attr("src", image.baseimageurl)
-						.load(function() {drawAnnotations(image)});
-
-					if (image.imagga) {
-						var listsInfo = imaggaListsTemplate(image.imagga);
-						$('#imagga-lists').html(listsInfo);	
-					}
-					if (image.clarifai) {
-						var tagInfo = clarifaiTagTemplate(image.clarifai);
-						$('#clarifai-tags').html(tagInfo);	
-					}
-					if (image.googlevision) {
-						if (image.googlevision.responses[0]) {
-							var tagInfo = googleTagTemplate(image.googlevision.responses[0]);
-							$('#google-tags').html(tagInfo);	
-
-							$("#google-show-faces").on("click", function(e) {
-								$("#faces").toggle();
-								});
-
-							$("#google-show-labels").on("click", function(e) {
-								$("#text").toggle();
-								});							
-						}				
-					}
-					if (image.microsoftvision) {
-						var listInfo = microsoftListsTemplate(image.microsoftvision);
-						$('#microsoft-lists').html(listInfo);		
-					}
-				});
+				renderImageData(image);
 			});
 		});
+
+		function switchImage(index) {
+			image = record.images[index];
+			renderImageData(image);
+		}
+
+		function renderImageData(image) {			
+			var imageInfoURL = image.iiifbaseuri + "/info.json";
+			$.getJSON(imageInfoURL, function(imageData) {
+				image.iiif = imageData;
+
+				$("#big-image")
+					.attr("src", image.baseimageurl)
+					.load(function() {drawAnnotations(image)});
+
+				if (image.imagga) {
+					var listsInfo = imaggaListsTemplate(image.imagga);
+					$('#imagga-lists').html(listsInfo);	
+				}
+				if (image.clarifai) {
+					var tagInfo = clarifaiTagTemplate(image.clarifai);
+					$('#clarifai-tags').html(tagInfo);	
+				}
+				if (image.googlevision) {
+					if (image.googlevision.responses[0]) {
+						var tagInfo = googleTagTemplate(image.googlevision.responses[0]);
+						$('#google-tags').html(tagInfo);	
+
+						$("#google-show-faces").on("click", function(e) {
+							$("#faces").toggle();
+							});
+
+						$("#google-show-labels").on("click", function(e) {
+							$("#text").toggle();
+							});							
+					}				
+				}
+				if (image.microsoftvision) {
+					var listInfo = microsoftListsTemplate(image.microsoftvision);
+					$('#microsoft-lists').html(listInfo);		
+				}
+			});
+		}
 
 		function drawAnnotations(image) {
 			//Test for width data in the original record
