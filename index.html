@@ -14,9 +14,9 @@
 	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
 	<script src="https://d3js.org/d3.v4.min.js"></script>
 	<style type="text/css">
-		#image-container {position: absolute;}
-		svg {position: absolute;top: 0px;left: 0px;z-index: 99999;}
-		#face-metrics {position: absolute;background: #f0f0f0;z-index: 99999;opacity: 0.8;visibility: hidden;padding: 15px;}
+		#image-container {position: fixed;}
+		svg {position: fixed;top: 0px;left: 0px;z-index: 99999;}
+		#face-metrics {position: fixed;background: #f0f0f0;z-index: 99999;opacity: 0.8;visibility: hidden;padding: 15px;}
 		#face-metrics ul {padding: 0px;}
 		#face-metrics ul li {list-style-type: none;}
 		#google-faces {margin-top: 5px; margin-bottom: 5px;}
@@ -459,7 +459,10 @@
 
 			var imageScaleFactor = image.iiif.width/displayImageWidth;
 
+			//Remove any existing annotations before drawing new ones
+			$("#annotations").remove();
 			var svgContainer = d3.select("#image-container").append("svg")
+											.attr("id", "annotations")
 		                                    .attr("width", $("#big-image").width())
 		                                    .attr("height", $("#big-image").height());
 
