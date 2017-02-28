@@ -385,23 +385,7 @@
 
 				var objectInfo = objectInfoTemplate(data);
 				$("#object-data").html(objectInfo);
-			
-				//This is a workaround until all experimental records have been updated with the new images data structure
-				if (!record.hasOwnProperty("images")) {
-					record.image.googlevision = record.googlevision;
-					delete(record.googlevision);
 
-					record.image.imagga = record.imagga;
-					delete(record.imagga);
-
-					record.image.clarifai = record.clarifai;
-					delete(record.clarifai);
-
-					record.images = []
-					record.images.push(record.image);
-
-					delete(record.image);
-				}
 				image = record.images[0];
 				renderImageData(image);
 			});
